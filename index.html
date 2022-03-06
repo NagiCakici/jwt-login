@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+  <title>Json Token</title>
+  <script type="text/javascript" src="js/jquery-3.2.1.js"></script>
+  <link rel="stylesheet" href="./css/login.css">
+</head>
+<body>
+<div class="menu">
+  <div class="navbar-nav">
+    <a class="nav-item nav-link" href="#" id="home">Anasayfa</a>
+    <a class="nav-item nav-link" href="#" id="sf1">Sayfa 1</a>
+    <a class="nav-item nav-link" href="#" id="sf2">Sayfa 2</a>
+    <a class="nav-item nav-link" href="#" id="logout">Logout</a>
+  </div>
+</div>
+<div id="response"></div>
+<div class="main">
+  <div id="content"></div>
+</div>
+
+<script type="text/javascript">
+
+
+  $(document).ready(function() {
+    //Anasayfa
+    $(document).on('click', '#home', function(){
+      clearResponse();
+      showHomePage();
+    });
+    //Sayfa 1
+    $(document).on('click', '#sf1', function(){
+      clearResponse();
+
+      // bağlantıyı kontrol edip sayfa içeriğini çekiyoruz
+      var jwt = getCookie('jwt');
+      $.post("api/validate_token.php", JSON.stringify({ jwt:jwt })).done(function(result) {
+
+          // sayfa içeriği
+          var html = `
+    <div class="center_point">
+        <div class="center">Hoş Geldiniz Burası Sayfa 1</div>
+    </div>
+    `;
+          $('#content').html(html);
+        })
+        // giriş yapılmamışsa
+        .fail(function(result){
+          showLoginPage();
+          $('#response').html("<div class='alert alert-danger'>Lütfen Giriş Yapınız</div>");
+        });
+    });
+
+    $(document).on('click', '#sf2', function(){
+      clearResponse();
+
+      // bağlantıyı kontrol edip sayfa içeriğini çekiyoruz
+      var jwt = getCookie('jwt');
+      $.post("api/validate_token.php", JSON.stringify({ jwt:jwt })).done(function(result) {
+
+          // sayfa içeriği
+          var html = `
+    <div class="center_point">
+        <div class="center">Hoş Geldiniz Burası Sayfa 2</div>
+    </div>
+    `;
+          $('#content').html(html);
+        })
+        // giriş yapılmamışsa
+        .fail(function(result){
+          showLoginPage();
+          $('#response').html("<div class='alert alert-danger'>Lütfen Giriş Yapınız.</div>");
+        });
+    });
+
+
+    function showLoginPage() {
+
+      // jwt sil
+      setCookie("jwt", "", 1);
+
+      // login html
+      var html = '<div class="center_point">' +
+        '<div class="center">' +
+        '<form class="login_form">' +
+        '        <div class="login_input"><input type="text" name="email" id="email" placeholder="Kullanıcı Adı"></div>' +
+        '        <div class="login_input"><input type="password" name="passwd" id="passwd" placeholder="Şifre"></div>' +
+        '        <div class="login_submit"><button type="button" class="submit" onclick="login();">Giriş</button> </div>' +
+        '        <div class="login_mesage"></div>' +
+        '    </form>' +
+        '</div>' +
+        '</div>';
+
+      $('#content').html(html);
+      $('.menu').hide();
+    }
+    // Çıkış yap fonksiyonu
+    $(document).on('click', '#logout', function(){
+      showLoginPage();
+      $('#response').html("<div class='alert alert-info'>Çıkış yaptınız.</div>");
+    });
+
+    function LoginControl() {
+      // Sayfa yenilendiğinde giriş yapılmışmı kontrolü yapıyoruz
+      var jwt = getCookie('jwt');
+      $.post("api/validate_token.php", JSON.stringify({jwt: jwt})).done(function(e) {
+        $('.menu').show();
+        showHomePage();
+      }).fail(function(result) {
+        showLoginPage();
+        $('#response').html("<div class='alert alert-danger'>Lütfen Giriş Yapınız.</div>");
+      });
+    }
+    //form verilerini serialize etmek için
+    $.fn.serializeObject = function()
+    {
+      var o = {};
+      var a = this.serializeArray();
+      $.each(a, function() {
+        if (o[this.name]) {
+          if (!o[this.name].push) {
+            o[this.name] = [o[this.name]];
+          }
+          o[this.name].push(this.value || '');
+        } else {
+          o[this.name] = this.value || '';
+        }
+      });
+      return o;
+    };
+
+    function clearResponse(){
+      $('#response').html('');
+    }
+    LoginControl();//sayfa yenilendiğinde veya sayfaya ilk gelindiğinde kontrol sağla
+  });
+
+  function login() {
+    var form_data=JSON.stringify($('.login_form').serializeObject());
+
+    $.ajax({
+      url        : "api/login.php",
+      type       : "POST",
+      contentType: 'application/json',
+      data       : form_data,
+      success    : function(result) {
+
+        // jwt yi çerez olarak tutuyoruz
+        setCookie("jwt", result.jwt, 1);
+
+        $('.menu').show();
+        $('#response').html("<div class='alert alert-success'>Giriş Başarılı.</div>");
+        showHomePage();
+      },
+      error      : function(xhr, resp, text) {
+        $('#response').html("<div class='alert alert-danger'>Giriş Başarısız E mail veya Şifre Hatalı.</div>");
+      }
+    });
+  }
+
+  function showHomePage() {
+    var jwt = getCookie('jwt');
+    $.post("api/validate_token.php", JSON.stringify({ jwt:jwt })).done(function(result) {
+
+        // Anasayfa İçeriği
+        var html = `
+    <div class="center_point">
+        <div class="center">Hoş Geldiniz Burası Ana sayfa</div>
+    </div>
+    `;
+
+        $('#content').html(html);
+        $('#response').html("");
+      })
+      // giriş yapılmamış ise
+      .fail(function(result){
+        showLoginPage();
+        $('#response').html("<div class='alert alert-danger'>Please login to access the home page.</div>");
+      });
+  }
+
+  function setCookie(cname, cvalue, exdays) {
+    var d = new Date();
+    d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
+    var expires = "expires=" + d.toUTCString();
+    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+  }
+
+  function getCookie(cname) {
+    var name = cname + "=";
+    var decodedCookie = decodeURIComponent(document.cookie);
+    var ca = decodedCookie.split(';');
+    for(var i = 0; i < ca.length; i++) {
+      var c = ca[i];
+      while(c.charAt(0) == ' ') {
+        c = c.substring(1);
+      }
+
+      if(c.indexOf(name) == 0) {
+        return c.substring(name.length, c.length);
+      }
+    }
+    return "";
+  }
+</script>
+</body>
+</html>
